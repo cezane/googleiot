@@ -6,21 +6,32 @@ root_ca = './certs/roots.pem'
 public_crt = './certs/rsa_cert.pem'
 private_key = './certs/rsa_private.pem'
 
-pubsub_url = "pubsub.googleapis.com" #"mqtt.googleapis.com"
-pubsub_port = 443
-topic = "projects/myproject/topics/sm1"
-subscription_name = "projects/myproject/subscriptions/sm1"
+pubsub_url = "mqtt.googleapis.com"
+pubsub_port = 8883
+topic = "/projects/securesmartmetering/topics/sm1"
+subscription_name = "projects/securesmartmetering/subscriptions/sm1"
 project_id   = "securesmartmetering"
 cloud_region = "us-central1"
 registry_id  = "sm1"
 device_id    = "sm1"
 
+def error_str(rc):
+    """Convert a Paho error to a human readable string."""
+    return "Some error occurred. {}: {}".format(rc, mqtt.error_string(rc))
+
+def on_disconnect(unused_client, unused_userdata, rc):
+    """Paho callback for when a device disconnects."""
+    print("on_disconnect", error_str(rc))
+
 def on_connect(client, userdata, flags, response_code):
     print("Connected with status: {0}".format(response_code))
-    client.subscribe("subscription_name", 1)
+    client.subscribe(topic, 1)
+
+def on_subscribe(client, userdata, mid, granted_qos):
+    print("Subscribed: "+str(mid)+" "+str(granted_qos))
 
 def on_message(client, userdata, msg):
-    print "------ON MESSAGE!!!!"
+    print("------ON MESSAGE!!!! -- {}".format(msg))
     print("Topic: {0} -- Payload: {1}".format(msg.topic, str(msg.payload)))
 
 if __name__ == "__main__":
@@ -49,6 +60,7 @@ if __name__ == "__main__":
 
     client.on_connect = on_connect
     client.on_message = on_message
+    client.on_disconnect = on_disconnect
 
     print("Connecting to Google IoT Broker...")
     client.connect(pubsub_url, pubsub_port, keepalive=60)
